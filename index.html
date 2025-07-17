@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Merchant Marine Aptitude Test (NaMMAT) English Reviewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Neutrals -->
+    <!-- Application Structure Plan: The application is designed as an interactive dashboard or "Practice Hub". The initial view presents three main categories (Vocabulary, SVA, Reading Comprehension) as distinct, clickable sections. This allows users to choose their area of focus, promoting self-directed learning. Upon selecting a category, the app dynamically displays quiz questions in pages of 5, allowing users to progress through the quiz incrementally. After submitting all pages for a category, a detailed results page appears, showing the score, a visual chart, and question-by-question feedback. An overall progress chart synthesizes results from all attempted sections. This non-linear, task-oriented structure with pagination is more engaging and user-friendly than a simple scrollable document, as it provides clear navigation, manageable practice sessions, and immediate, actionable feedback on performance. -->
+    <!-- Visualization & Content Choices: Report Info -> Key performance indicators (scores). Goal -> Compare user performance across categories. Viz -> Horizontal Bar Chart (Chart.js). Interaction -> Chart updates dynamically as sections are completed. Justification -> A bar chart provides a clear, at-a-glance comparison of performance in different skill areas, directly addressing the report's goal of identifying strengths and weaknesses. Report Info -> Individual section score. Goal -> Show part-to-whole relationship (correct vs. incorrect). Viz -> Doughnut Chart (Chart.js). Interaction -> Generated on quiz completion. Justification -> A doughnut chart is an intuitive way to visualize a percentage score. Reading comprehension passages now include descriptions of hypothetical charts and statistics, with questions designed to test data interpretation. All other content is presented as interactive quiz elements (HTML radio buttons) to transform the static text into an active learning experience. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Tailwind gray-50 */
+        }
+        .nav-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 280px;
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+        }
+         .results-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 1024px) {
+            .results-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">National Merchant Marine Aptitude Test (NaMMAT) English Reviewer</h1>
+            <p class="mt-2 text-lg text-gray-600">Select a category to test your knowledge and prepare for your assessment.</p>
+        </header>
+
+        <nav id="category-selection" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Navigation Cards will be injected here by JS -->
+        </nav>
+
+        <main id="practice-area" class="hidden">
+            <!-- Quiz content will be injected here -->
+        </main>
+
+        <section id="results-area" class="hidden">
+             <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+                <button id="back-to-hub-btn" class="mb-6 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">← Back to Hub</button>
+                <div class="results-grid">
+                    <div id="score-summary">
+                        <h2 id="results-title" class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2"></h2>
+                        <p id="results-score" class="text-4xl font-bold text-blue-600 mb-4"></p>
+                        <p id="results-feedback-text" class="text-base text-gray-600 mb-6"></p>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="score-doughnut-chart"></canvas>
+                    </div>
+                </div>
+                <div id="question-feedback" class="mt-8 border-t border-gray-200 pt-6">
+                    <h3 class="text-xl font-bold mb-4">Detailed Review</h3>
+                    <!-- Detailed question feedback will be injected here -->
+                </div>
+            </div>
+        </section>
+
+        <section id="overall-progress" class="bg-white p-6 sm:p-8 rounded-xl shadow-lg mt-8 hidden">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Overall Progress</h2>
+            <p class="text-center text-gray-600 mb-6">This chart summarizes your performance across all completed sections, helping you identify areas of strength and weakness.</p>
+            <div class="chart-container h-96 max-w-3xl">
+                <canvas id="overall-progress-chart"></canvas>
+            </div>
+             <div id="final-assessment" class="text-center mt-6"></div>
+        </section>
+
+    </div>
+
+    <script>
+        const quizData = {
+            vocabulary: {
+                title: "Vocabulary",
+                icon: "📖",
+                questions: [
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'NAVIGATE'.", options: ["Sink", "Steer", "Anchor", "Drift"], correct: 1, explanation: "To navigate means to plan and direct the course of a ship, which is synonymous with steering." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'AFT'.", options: ["Stern", "Bow", "Port", "Starboard"], correct: 1, explanation: "'Aft' refers to the rear part of a ship, while 'bow' refers to the front part." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'BERTH'.", options: ["Storm", "Dock", "Voyage", "Current"], correct: 1, explanation: "A 'berth' is a place where a ship can be moored, similar to a dock." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'ROUGH SEAS'.", options: ["Calm Waters", "High Tide", "Strong Current", "Deep Ocean"], correct: 0, explanation: "'Rough seas' describe turbulent water conditions, while 'calm waters' describe peaceful conditions." },
+                    { question: "CONTEXT: The captain ordered the crew to _________ the cargo securely before the storm.", options: ["release", "jettison", "stow", "unload"], correct: 2, explanation: "To 'stow' means to pack or store something carefully and neatly, especially on a ship." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'FLOTSAM'.", options: ["Debris", "Anchor", "Buoy", "Lighthouse"], correct: 0, explanation: "'Flotsam' refers to wreckage of a ship or its cargo found floating on the sea, which is a type of debris." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'SUBMERGE'.", options: ["Float", "Dive", "Sink", "Descend"], correct: 0, explanation: "To 'submerge' means to go underwater, while 'float' means to rest on the surface." },
+                    { question: "CONTEXT: The ship's _________ was severely damaged after colliding with the iceberg.", options: ["mast", "funnel", "hull", "rudder"], correct: 2, explanation: "The 'hull' is the main body or frame of a ship, which would be damaged in a collision." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'MARITIME'.", options: ["Land-based", "Coastal", "Oceanic", "Aerial"], correct: 2, explanation: "'Maritime' relates to the sea or shipping, making 'oceanic' a close synonym." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'ABANDON SHIP'.", options: ["Board Vessel", "Remain Aboard", "Launch Lifeboat", "Send Distress Signal"], correct: 1, explanation: "'Abandon ship' means to leave the vessel, while 'remain aboard' means to stay on it." },
+                    // 10 new vocabulary questions (total 20)
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'FATHOM'.", options: ["Measure", "Understand", "Swim", "Explore"], correct: 1, explanation: "To 'fathom' means to understand a difficult problem or person after much thought, or to measure depth." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'SHALLOW'.", options: ["Broad", "Narrow", "Deep", "Surface"], correct: 2, explanation: "'Shallow' refers to a lack of depth, so 'deep' is its direct opposite." },
+                    { question: "CONTEXT: The ship was in a state of _____, having lost power and communication.", options: ["serenity", "jeopardy", "stagnation", "prosperity"], correct: 1, explanation: "'Jeopardy' means danger of loss, harm, or failure, which fits the context of a ship losing power and communication." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'DECK'.", options: ["Hold", "Platform", "Cabin", "Keel"], correct: 1, explanation: "A 'deck' is a flat, horizontal surface on a ship, similar to a platform." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'STERN'.", options: ["Bow", "Port", "Starboard", "Mast"], correct: 0, explanation: "'Stern' refers to the rear part of a ship, while 'bow' refers to the front part." },
+                    { question: "CONTEXT: The ______ system ensures the ship's stability by adjusting water levels.", options: ["propulsion", "ballast", "ventilation", "navigation"], correct: 1, explanation: "A 'ballast' system uses water or other material to provide stability to a vessel." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'ANCHOR'.", options: ["Drift", "Mooring", "Sail", "Float"], correct: 1, explanation: "An 'anchor' is used for 'mooring' a vessel to the seabed." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'DRIFT'.", options: ["Moor", "Float", "Flow", "Wander"], correct: 0, explanation: "To 'drift' means to be carried along by currents without control, while to 'moor' means to secure a ship." },
+                    { question: "CONTEXT: The vessel's ______ was too high for the shallow port.", options: ["beam", "length", "draft", "tonnage"], correct: 2, explanation: "A ship's 'draft' (or draught) is the depth of water it needs to float, critical for shallow areas." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'GALLEY'.", options: ["Bridge", "Engine Room", "Kitchen", "Hold"], correct: 2, explanation: "A 'galley' is the kitchen on a ship." },
+                    // 10 more new vocabulary questions (total 30)
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'LANYARD'.", options: ["Rope", "Chain", "Cable", "Wire"], correct: 0, explanation: "A 'lanyard' is a short piece of rope or cord used for securing or holding something." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'AFLOAT'.", options: ["Submerged", "Floating", "Buoyant", "Surface"], correct: 0, explanation: "'Afloat' means floating on water, so 'submerged' is its opposite." },
+                    { question: "CONTEXT: The crew performed a thorough ______ of all safety equipment before departure.", options: ["neglect", "omission", "inspection", "disregard"], correct: 2, explanation: "An 'inspection' is a careful examination or scrutiny, which is necessary for safety equipment." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'HULL'.", options: ["Superstructure", "Framework", "Mast", "Funnel"], correct: 1, explanation: "The 'hull' is the main body or framework of a ship." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'STOW'.", options: ["Pack", "Unload", "Secure", "Arrange"], correct: 1, explanation: "To 'stow' means to pack or store, so 'unload' is its opposite." },
+                    { question: "CONTEXT: The ship's ______ was designed to reduce drag and improve fuel efficiency.", options: ["rudder", "propeller", "bow", "anchor"], correct: 2, explanation: "The shape of a ship's 'bow' (front) is crucial for reducing drag and improving efficiency." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'MOORING'.", options: ["Sailing", "Anchoring", "Drifting", "Cruising"], correct: 1, explanation: "'Mooring' refers to the act of securing a vessel, often by 'anchoring'." },
+                    { question: "ANTONYM: Choose the word most opposite in meaning to 'EMBARK'.", options: ["Board", "Depart", "Disembark", "Sail"], correct: 2, explanation: "To 'embark' means to go on board a ship, so 'disembark' means to leave it." },
+                    { question: "CONTEXT: The vessel received a ______ from the port authority to proceed to its berth.", options: ["prohibition", "permission", "denial", "refusal"], correct: 1, explanation: "A 'permission' or clearance is required from port authorities to proceed." },
+                    { question: "SYNONYM: Choose the word most similar in meaning to 'CARGO'.", options: ["Crew", "Freight", "Ballast", "Provisions"], correct: 1, explanation: "'Cargo' refers to goods carried on a ship, which is synonymous with 'freight'." }
+                ]
+            },
+            sva: {
+                title: "Subject-Verb Agreement",
+                icon: "✍️",
+                questions: [
+                    { question: "The crew members __ preparing for the drill.", options: ["is", "are", "was", "be"], correct: 1, explanation: "'Crew members' is a plural subject, so it requires the plural verb 'are'." },
+                    { question: "Each of the vessels __ a unique identification number.", options: ["have", "has", "are having", "is having"], correct: 1, explanation: "'Each' is a singular pronoun and acts as the subject, requiring the singular verb 'has'." },
+                    { question: "The captain, along with his officers, __ the radar.", options: ["monitor", "monitors", "are monitoring", "have monitored"], correct: 1, explanation: "The true subject is 'captain' (singular). The phrase 'along with his officers' does not affect the verb agreement." },
+                    { question: "Neither the first mate nor the engineers __ available.", options: ["is", "are", "was", "be"], correct: 1, explanation: "When 'neither...nor' connects two subjects, the verb agrees with the subject closest to it ('engineers' is plural)." },
+                    { question: "The number of lifeboats __ sufficient for all passengers.", options: ["is", "are", "were", "be"], correct: 0, explanation: "'The number' is a singular subject, requiring the singular verb 'is'." },
+                    { question: "Twenty knots __ a good speed for this vessel.", options: ["is", "are", "were", "seem"], correct: 0, explanation: "When a plural noun refers to a single quantity or unit, it takes a singular verb." },
+                    { question: "The ship's logs, which contain critical data, __ to be updated daily.", options: ["need", "needs", "is needing", "has needed"], correct: 0, explanation: "The subject is 'logs' (plural), so the verb should be plural ('need')." },
+                    { question: "More than one officer __ present at the safety briefing.", options: ["was", "were", "are", "be"], correct: 0, explanation: "The phrase 'more than one' always takes a singular verb." },
+                    { question: "The condition of the ropes and sails __ quickly in saltwater.", options: ["deteriorate", "deteriorates", "are deteriorating", "have deteriorated"], correct: 1, explanation: "The subject is 'condition' (singular), not 'ropes and sails'. Therefore, the verb should be singular." },
+                    { question: "Every captain and crew member __ the importance of safety.", options: ["understand", "understands", "are understanding", "have understood"], correct: 1, explanation: "When 'every' or 'each' precedes singular subjects joined by 'and,' the verb is singular." },
+                    // 10 new SVA questions (total 20)
+                    { question: "The series of drills __ essential for crew readiness.", options: ["is", "are", "were", "have been"], correct: 0, explanation: "'Series' is a singular noun, so the verb must be singular ('is')." },
+                    { question: "A large percentage of the cargo __ damaged.", options: ["was", "were", "are", "have been"], correct: 0, explanation: "When 'percentage' refers to a singular or uncountable noun ('cargo'), the verb is singular ('was')." },
+                    { question: "Neither the captain nor the chief engineer __ aware of the issue.", options: ["was", "were", "are", "have been"], correct: 0, explanation: "When 'neither...nor' connects two singular subjects, the verb is singular ('was')." },
+                    { question: "The regulations, including the new amendments, __ apply to all vessels.", options: ["do", "does", "is applying", "has applied"], correct: 0, explanation: "The subject is 'regulations' (plural), so the verb must be plural ('do')." },
+                    { question: "Each of the emergency procedures __ clearly outlined.", options: ["is", "are", "were", "have been"], correct: 0, explanation: "'Each' is a singular pronoun, so the verb must be singular ('is')." },
+                    { question: "The number of incidents __ decreased this year.", options: ["has", "have", "are", "were"], correct: 0, explanation: "'The number' is a singular subject, requiring the singular verb 'has'." },
+                    { question: "All of the safety equipment __ regularly inspected.", options: ["is", "are", "were", "have been"], correct: 0, explanation: "'Equipment' is a collective noun treated as singular, so the verb is singular ('is')." },
+                    { question: "The sound of the waves __ calming.", options: ["is", "are", "were", "be"], correct: 0, explanation: "The subject is 'sound' (singular), so the verb must be singular ('is')." },
+                    { question: "The committee __ decided on the new policy.", options: ["has", "have", "are", "were"], correct: 0, explanation: "'Committee' is a collective noun that can be singular when acting as a unit, so 'has' is appropriate." },
+                    { question: "There __ a few minor issues with the engine.", options: ["is", "are", "was", "be"], correct: 1, explanation: "The verb agrees with the noun that follows, 'issues' (plural), so 'are' is correct." },
+                    // 10 more new SVA questions (total 30)
+                    { question: "The main concern for the crew __ the approaching storm.", options: ["is", "are", "were", "be"], correct: 0, explanation: "The subject 'concern' is singular, so the verb must be singular ('is')." },
+                    { question: "A variety of tools __ needed for engine maintenance.", options: ["is", "are", "was", "has been"], correct: 1, explanation: "'A variety' is typically treated as plural, agreeing with 'tools', so 'are' is correct." },
+                    { question: "The cargo, along with its packing materials, __ stored in the hold.", options: ["was", "were", "are", "have been"], correct: 0, explanation: "The subject is 'cargo' (singular), and 'along with...' does not change the verb agreement." },
+                    { question: "Each of the ship's compartments __ equipped with sprinklers.", options: ["is", "are", "were", "have been"], correct: 0, explanation: "'Each' is a singular pronoun, requiring a singular verb ('is')." },
+                    { question: "The data from the weather buoy __ updated hourly.", options: ["is", "are", "were", "have been"], correct: 0, explanation: "'Data' in this context refers to a collective body of information, treated as singular ('is')." },
+                    { question: "Neither the captain nor the officers __ allowed to leave the bridge during critical maneuvers.", options: ["is", "are", "was", "has been"], correct: 1, explanation: "The verb agrees with the closest subject, 'officers' (plural)." },
+                    { question: "The total weight of the containers __ calculated before loading.", options: ["was", "were", "are", "have been"], correct: 0, explanation: "The subject 'weight' is singular, so the verb must be singular ('was')." },
+                    { question: "Many of the new recruits __ adapting well to life at sea.", options: ["is", "are", "was", "has been"], correct: 1, explanation: "'Many' is a plural quantifier, so the verb must be plural ('are')." },
+                    { question: "The ship's procedures manual __ revised last month.", options: ["was", "were", "are", "have been"], correct: 0, explanation: "The subject 'manual' is singular, so the verb must be singular ('was')." },
+                    { question: "There __ a strong current near the reef.", options: ["is", "are", "were", "be"], correct: 0, explanation: "The verb agrees with the noun that follows, 'current' (singular), so 'is' is correct." }
+                ]
+            },
+            reading: {
+                title: "Reading Comprehension",
+                icon: "📰",
+                questions: [
+                    { context: "Passage 1: The International Convention for the Safety of Life at Sea (SOLAS) is an international maritime treaty that sets minimum safety standards... It is generally regarded as the most important of all international treaties concerning the safety of merchant ships.", question: "What is the primary purpose of the SOLAS convention?", options: ["To regulate fishing activities.", "To set minimum safety standards for merchant ships.", "To manage international trade routes.", "To establish maritime boundaries."], correct: 1, explanation: "The passage explicitly states SOLAS sets minimum safety standards for merchant ships." },
+                    { context: "Passage 1", question: "When did the current version of SOLAS (SOLAS 1974) come into force?", options: ["1974", "1980", "2000", "It is not mentioned."], correct: 1, explanation: "The passage states SOLAS 1974 came into force in 1980." },
+                    { context: "Passage 1", question: "Who is responsible for ensuring compliance with SOLAS standards for ships under their flag?", options: ["The ship's captain.", "The International Maritime Organization (IMO).", "Signatory flag states.", "The ship's owner."], correct: 2, explanation: "The text says the convention requires signatory flag states to ensure compliance." },
+                    { context: "Passage 1", question: "According to the passage, how has SOLAS 1974 evolved since its inception?", options: ["It has remained unchanged.", "It has been replaced by a newer convention.", "It has been amended and updated numerous times.", "It only applies to new ships."], correct: 2, explanation: "The passage states, 'It has been amended and updated numerous times since then.'" },
+                    { context: "Passage 1", question: "What does the passage imply about the importance of SOLAS?", options: ["It is a minor treaty.", "It's concerned with environmental protection.", "It is the most important treaty for merchant ship safety.", "Its importance has declined."], correct: 2, explanation: "The passage concludes it is 'regarded as the most important' treaty for ship safety." },
+                    { context: "Passage 2: A marine engineer is a highly skilled professional responsible for the design, construction, operation, and maintenance of the propulsion and other engineering systems... Marine engineers play a critical role in a ship's operational readiness and safety...", question: "What is a primary responsibility of a marine engineer?", options: ["Navigating the ship.", "Managing the ship's cargo.", "Maintaining propulsion and engineering systems.", "Providing medical care."], correct: 2, explanation: "The passage clearly states their responsibility for maintenance of propulsion and engineering systems." },
+                    { context: "Passage 2", question: "Which system is NOT mentioned as part of a marine engineer's duties?", options: ["Electrical systems.", "Galley equipment.", "Fresh water systems.", "Refrigeration."], correct: 1, explanation: "The passage lists electrical, refrigeration, fresh water, and sewage systems, but not galley equipment." },
+                    { context: "Passage 2", question: "What challenges might a marine engineer face at sea?", options: ["Dealing with passenger complaints.", "Troubleshooting complex mechanical and electrical issues.", "Planning the ship's route.", "Negotiating port fees."], correct: 1, explanation: "The passage states they troubleshoot 'complex mechanical and electrical issues at sea'." },
+                    { context: "Passage 2", question: "Why is continuous training important for marine engineers?", options: ["To improve culinary skills.", "To adhere to safety protocols and stay updated.", "To learn new languages.", "To become eligible for promotion."], correct: 1, explanation: "The passage links training with adhering to strict safety protocols." },
+                    { context: "Passage 2", question: "What role do marine engineers play in a ship's overall operation?", options: ["Solely cargo loading.", "They ensure operational readiness and safety.", "Primarily administrative tasks.", "Navigation only."], correct: 1, explanation: "The passage says they play a 'critical role in a ship's operational readiness and safety'." },
+                    // 10 new reading comprehension questions (total 20)
+                    { context: "Passage 5: A recent fuel consumption report for the cargo vessel 'Sea Serpent' shows the average daily fuel consumption (in metric tons) over the last four quarters. Q1 recorded 25 MT, Q2 saw a slight decrease to 22 MT, Q3 increased significantly to 30 MT, and Q4 remained high at 28 MT. This variation is primarily attributed to changes in cargo load and prevailing weather conditions during each quarter.", question: "In which quarter did the 'Sea Serpent' consume the least fuel?", options: ["Q1", "Q2", "Q3", "Q4"], correct: 1, explanation: "The passage states Q2 recorded the lowest consumption at 22 MT." },
+                    { context: "Passage 5", question: "What was the highest average daily fuel consumption recorded?", options: ["22 MT", "25 MT", "28 MT", "30 MT"], correct: 3, explanation: "The passage indicates Q3 had the highest consumption at 30 MT." },
+                    { context: "Passage 5", question: "What factors are suggested to influence the fuel consumption variation?", options: ["Crew size and maintenance.", "Engine type and age.", "Cargo load and weather conditions.", "Port calls and routing."], correct: 2, explanation: "The passage attributes variation to 'changes in cargo load and prevailing weather conditions'." },
+                    { context: "Passage 5", question: "How much more fuel was consumed in Q4 compared to Q2?", options: ["3 MT", "5 MT", "6 MT", "8 MT"], correct: 2, explanation: "Q4 consumed 28 MT and Q2 consumed 22 MT, so 28 - 22 = 6 MT." },
+                    { context: "Passage 5", question: "What was the total fuel consumption for Q1 and Q2 combined?", options: ["47 MT", "50 MT", "52 MT", "55 MT"], correct: 0, explanation: "Q1 consumed 25 MT and Q2 consumed 22 MT, so 25 + 22 = 47 MT." },
+                    { context: "Passage 6: A breakdown of annual crew training hours on board the 'Ocean Explorer' reveals the distribution across key areas. Safety Drills accounted for 40% of total training hours, followed by Navigation & Bridge Procedures at 30%. Engine Room Operations comprised 20%, and remaining 10% was dedicated to Medical & First Aid training. The total annual training hours for the crew was 1000 hours.", question: "Which training area received the most hours?", options: ["Navigation & Bridge Procedures", "Engine Room Operations", "Safety Drills", "Medical & First Aid"], correct: 2, explanation: "Safety Drills accounted for 40%, the highest percentage." },
+                    { context: "Passage 6", question: "How many hours were dedicated to Engine Room Operations?", options: ["100 hours", "200 hours", "300 hours", "400 hours"], correct: 1, explanation: "Engine Room Operations was 20% of 1000 hours, which is 200 hours (0.20 * 1000 = 200)." },
+                    { context: "Passage 6", question: "What percentage of training hours were allocated to Navigation & Bridge Procedures?", options: ["10%", "20%", "30%", "40%"], correct: 2, explanation: "The passage states Navigation & Bridge Procedures accounted for 30%." },
+                    { context: "Passage 6", question: "If the total training hours increased to 1200, how many hours would Safety Drills account for?", options: ["400 hours", "480 hours", "500 hours", "520 hours"], correct: 1, explanation: "Safety Drills are 40% of the total. 40% of 1200 hours is 480 hours (0.40 * 1200 = 480)." },
+                    { context: "Passage 6", question: "What was the combined percentage of training hours for Navigation & Bridge Procedures and Medical & First Aid?", options: ["30%", "40%", "50%", "60%"], correct: 1, explanation: "Navigation & Bridge Procedures (30%) + Medical & First Aid (10%) = 40%." },
+                    // 10 more new reading comprehension questions (total 30)
+                    { context: "Passage 7: A recent survey on crew well-being across different vessel types (Container, Tanker, Bulk Carrier) showed varying satisfaction levels. Container vessels reported 75% satisfaction, Tankers 60%, and Bulk Carriers 80%. The survey focused on factors like shore leave, internet access, and food quality. Internet access was consistently rated as the most important factor by all crew members.", question: "Which vessel type reported the highest crew satisfaction?", options: ["Container", "Tanker", "Bulk Carrier", "All were equal"], correct: 2, explanation: "Bulk Carriers reported 80% satisfaction, which is the highest." },
+                    { context: "Passage 7", question: "What was the satisfaction level reported by Tanker vessels?", options: ["75%", "60%", "80%", "Not specified"], correct: 1, explanation: "Tankers reported 60% satisfaction." },
+                    { context: "Passage 7", question: "What factor was consistently rated as most important by all crew members?", options: ["Shore leave", "Food quality", "Internet access", "Working hours"], correct: 2, explanation: "Internet access was consistently rated as the most important factor." },
+                    { context: "Passage 7", question: "What is the difference in satisfaction percentage between Container vessels and Tankers?", options: ["5%", "10%", "15%", "20%"], correct: 2, explanation: "Container (75%) - Tanker (60%) = 15% difference." },
+                    { context: "Passage 7", question: "The survey focused on which of the following factors?", options: ["Salary, benefits, and safety", "Shore leave, internet access, and food quality", "Training, promotion, and leadership", "Workload, equipment, and communication"], correct: 1, explanation: "The passage states the survey focused on 'shore leave, internet access, and food quality'." },
+                    { context: "Passage 8: A port's annual cargo throughput (in million tons) has fluctuated over the past five years. Year 1: 15 MT, Year 2: 18 MT, Year 3: 16 MT, Year 4: 20 MT, Year 5: 17 MT. The port invested in new crane technology in Year 3, expecting increased efficiency.", question: "In which year did the port achieve its highest cargo throughput?", options: ["Year 1", "Year 2", "Year 3", "Year 4"], correct: 3, explanation: "Year 4 recorded the highest throughput at 20 MT." },
+                    { context: "Passage 8", question: "What was the cargo throughput in Year 3?", options: ["15 MT", "18 MT", "16 MT", "20 MT"], correct: 2, explanation: "The passage states Year 3 throughput was 16 MT." },
+                    { context: "Passage 8", question: "When did the port invest in new crane technology?", options: ["Year 1", "Year 2", "Year 3", "Year 4"], correct: 2, explanation: "The passage mentions the investment in 'Year 3'." },
+                    { context: "Passage 8", question: "What was the total cargo throughput for the first two years?", options: ["30 MT", "33 MT", "35 MT", "38 MT"], correct: 1, explanation: "Year 1 (15 MT) + Year 2 (18 MT) = 33 MT." },
+                    { context: "Passage 8", question: "Did the investment in Year 3 immediately lead to an increase in throughput in Year 4?", options: ["No, it decreased.", "Yes, it increased significantly.", "It remained the same.", "The passage does not provide enough information."], correct: 1, explanation: "Throughput increased from 16 MT in Year 3 to 20 MT in Year 4, indicating an immediate increase." }
+                ]
+            }
+        };
+
+        const state = {
+            scores: {
+                vocabulary: null,
+                sva: null,
+                reading: null,
+            },
+            currentCategory: null,
+            userAnswers: [], // Stores answers for all questions in the current category
+            currentPage: 0,
+            questionsPerPage: 5
+        };
+
+        let scoreDoughnutChart = null;
+        let overallProgressChart = null;
+
+        const categorySelection = document.getElementById('category-selection');
+        const practiceArea = document.getElementById('practice-area');
+        const resultsArea = document.getElementById('results-area');
+        const backToHubBtn = document.getElementById('back-to-hub-btn');
+        const overallProgressSection = document.getElementById('overall-progress');
+
+        function init() {
+            renderNavCards();
+            backToHubBtn.addEventListener('click', showHub);
+        }
+
+        function renderNavCards() {
+            categorySelection.innerHTML = '';
+            for (const key in quizData) {
+                const category = quizData[key];
+                const card = document.createElement('div');
+                card.className = 'nav-card bg-white p-6 rounded-xl shadow-md cursor-pointer flex flex-col items-center justify-center text-center';
+                card.innerHTML = `
+                    <div class="text-4xl mb-3">${category.icon}</div>
+                    <h2 class="text-xl font-bold text-gray-900">${category.title}</h2>
+                    <p class="text-gray-500 mt-1">${category.questions.length} Questions</p>
+                `;
+                card.addEventListener('click', () => startPractice(key));
+                categorySelection.appendChild(card);
+            }
+        }
+
+        function startPractice(categoryKey) {
+            state.currentCategory = categoryKey;
+            state.userAnswers = new Array(quizData[categoryKey].questions.length).fill(null);
+            state.currentPage = 0;
+            
+            categorySelection.classList.add('hidden');
+            overallProgressSection.classList.add('hidden');
+            resultsArea.classList.add('hidden');
+            
+            renderQuizPage();
+        }
+
+        function renderQuizPage() {
+            const categoryKey = state.currentCategory;
+            const questions = quizData[categoryKey].questions;
+            const startIndex = state.currentPage * state.questionsPerPage;
+            const endIndex = Math.min(startIndex + state.questionsPerPage, questions.length);
+            const currentQuestions = questions.slice(startIndex, endIndex);
+
+            let questionsHTML = `<div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+                                    <h2 class="text-3xl font-bold mb-6 text-center">${quizData[categoryKey].title} (Page ${state.currentPage + 1} of ${Math.ceil(questions.length / state.questionsPerPage)})</h2>`;
+            
+            currentQuestions.forEach((q, index) => {
+                const globalIndex = startIndex + index;
+                questionsHTML += `
+                    <div class="mb-8">
+                        ${q.context ? `<p class="mb-2 p-3 bg-gray-100 rounded-md text-gray-700 italic">${q.context}</p>` : ''}
+                        <p class="font-semibold text-lg mb-3">${globalIndex + 1}. ${q.question}</p>
+                        <div class="space-y-2">
+                `;
+                q.options.forEach((opt, optIndex) => {
+                    const checked = state.userAnswers[globalIndex] === optIndex ? 'checked' : '';
+                    questionsHTML += `
+                        <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="question-${globalIndex}" value="${optIndex}" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" ${checked}>
+                            <span class="ml-3 text-gray-800">${opt}</span>
+                        </label>
+                    `;
+                });
+                questionsHTML += `</div></div>`;
+            });
+
+            questionsHTML += `<div class="flex justify-between mt-6">`;
+            if (state.currentPage > 0) {
+                questionsHTML += `<button id="prev-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors">Previous</button>`;
+            } else {
+                questionsHTML += `<div></div>`; // Empty div to maintain spacing
+            }
+
+            if (endIndex < questions.length) {
+                questionsHTML += `<button id="next-btn" class="bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors text-lg">Next</button>`;
+            } else {
+                questionsHTML += `<button id="submit-btn" class="bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors text-lg">Submit All Answers</button>`;
+            }
+            questionsHTML += `</div></div>`;
+
+            practiceArea.innerHTML = questionsHTML;
+            practiceArea.classList.remove('hidden');
+
+            const prevBtn = document.getElementById('prev-btn');
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    state.currentPage--;
+                    renderQuizPage();
+                });
+            }
+
+            const nextBtn = document.getElementById('next-btn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    state.currentPage++;
+                    renderQuizPage();
+                });
+            }
+
+            const submitBtn = document.getElementById('submit-btn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', handleSubmit);
+            }
+
+            practiceArea.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const questionIndex = parseInt(e.target.name.split('-')[1]);
+                    state.userAnswers[questionIndex] = parseInt(e.target.value);
+                });
+            });
+        }
+        
+        function handleSubmit() {
+            const categoryKey = state.currentCategory;
+            const questions = quizData[categoryKey].questions;
+            let score = 0;
+            state.userAnswers.forEach((answer, index) => {
+                if (answer === questions[index].correct) {
+                    score++;
+                }
+            });
+            
+            state.scores[categoryKey] = score;
+            displayResults(categoryKey, score, questions.length);
+        }
+
+        function displayResults(categoryKey, score, total) {
+            practiceArea.classList.add('hidden');
+            resultsArea.classList.remove('hidden');
+            
+            document.getElementById('results-title').textContent = `Results: ${quizData[categoryKey].title}`;
+            document.getElementById('results-score').textContent = `${score} / ${total}`;
+            
+            const percentage = (score / total) * 100;
+            const feedbackText = document.getElementById('results-feedback-text');
+            if (percentage >= 90) feedbackText.textContent = "Excellent! You have a strong command of this topic.";
+            else if (percentage >= 75) feedbackText.textContent = "Good! A solid understanding, with some room for improvement.";
+            else if (percentage >= 60) feedbackText.textContent = "Fair. You have a foundational understanding, but this area needs more focus.";
+            else feedbackText.textContent = "Needs Improvement. Review the explanations to build a stronger foundation.";
+
+            renderDoughnutChart(score, total);
+            renderQuestionFeedback(categoryKey);
+            updateOverallProgress();
+        }
+
+        function renderDoughnutChart(score, total) {
+            const ctx = document.getElementById('score-doughnut-chart').getContext('2d');
+            if(scoreDoughnutChart) {
+                scoreDoughnutChart.destroy();
+            }
+            scoreDoughnutChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Correct', 'Incorrect'],
+                    datasets: [{
+                        data: [score, total - score],
+                        backgroundColor: ['#22c55e', '#ef4444'],
+                        borderColor: ['#ffffff', '#ffffff'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Score Breakdown'
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderQuestionFeedback(categoryKey) {
+            const feedbackContainer = document.getElementById('question-feedback');
+            const questions = quizData[categoryKey].questions;
+            let feedbackHTML = '';
+
+            questions.forEach((q, index) => {
+                const userAnswer = state.userAnswers[index];
+                const isCorrect = userAnswer === q.correct;
+
+                feedbackHTML += `<div class="mb-6 p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}">`;
+                feedbackHTML += `<p class="font-semibold mb-2">${index + 1}. ${q.question}</p>`;
+                
+                q.options.forEach((opt, optIndex) => {
+                    let classes = "flex items-center p-2 rounded-md my-1";
+                    let indicator = '';
+
+                    if (optIndex === q.correct) {
+                        classes += " bg-green-100 font-bold";
+                        indicator = `<span class="text-green-600 mr-2">✔</span>`;
+                    }
+                    if (optIndex === userAnswer && !isCorrect) {
+                        classes += " bg-red-100";
+                        indicator = `<span class="text-red-600 mr-2">✖</span>`;
+                    }
+                     if (optIndex === userAnswer && isCorrect) {
+                        indicator = `<span class="text-green-600 mr-2">✔</span>`;
+                    }
+
+                    feedbackHTML += `<div class="${classes}">${indicator}<span>${opt}</span></div>`;
+                });
+                
+                feedbackHTML += `<p class="mt-3 text-sm text-gray-700 bg-blue-50 p-2 rounded-md"><strong class="font-semibold">Explanation:</strong> ${q.explanation}</p>`;
+                feedbackHTML += `</div>`;
+            });
+            feedbackContainer.innerHTML = feedbackHTML;
+        }
+
+        function updateOverallProgress() {
+            const completedCategories = Object.keys(state.scores).filter(key => state.scores[key] !== null);
+            if (completedCategories.length === 0) return;
+
+            overallProgressSection.classList.remove('hidden');
+
+            const labels = completedCategories.map(key => quizData[key].title);
+            const data = completedCategories.map(key => (state.scores[key] / quizData[key].questions.length) * 100);
+
+            const ctx = document.getElementById('overall-progress-chart').getContext('2d');
+            if (overallProgressChart) {
+                overallProgressChart.destroy();
+            }
+            overallProgressChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Score (%)',
+                        data: data,
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Percentage Score'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            if(completedCategories.length === Object.keys(quizData).length) {
+                const totalScore = Object.values(state.scores).reduce((a, b) => a + b, 0);
+                const totalQuestions = Object.values(quizData).reduce((sum, cat) => sum + cat.questions.length, 0);
+                const overallPercentage = (totalScore / totalQuestions) * 100;
+
+                const assessmentText = document.getElementById('final-assessment');
+                let assessmentHTML = `<h3 class="text-xl font-bold mt-4">Final Assessment</h3>`;
+                if (overallPercentage >= 90) assessmentHTML += `<p class="text-gray-700">Excellent overall performance!</p>`;
+                else if (overallPercentage >= 75) assessmentHTML += `<p class="text-gray-700">Good job! Continue to practice your weaker areas.</p>`;
+                else if (overallPercentage >= 60) assessmentHTML += `<p class="text-gray-700">Fair performance. You have a solid base but need to review key topics.</p>`;
+                else assessmentHTML += `<p class="text-gray-700">You need significant review. Focus on the sections with the lowest scores.</p>`;
+                assessmentText.innerHTML = assessmentHTML;
+            }
+        }
+
+        function showHub() {
+            resultsArea.classList.add('hidden');
+            categorySelection.classList.remove('hidden');
+            if (Object.values(state.scores).some(s => s !== null)) {
+                overallProgressSection.classList.remove('hidden');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
